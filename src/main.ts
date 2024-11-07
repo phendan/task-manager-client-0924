@@ -2,6 +2,9 @@ import './style.css';
 
 import { showRegisterPage, showLoginPage } from './auth';
 import { showTasksPage } from './tasks';
+import { result } from './utilities/validateSchema';
+
+console.log(result);
 
 const routes = {
     register: showRegisterPage,

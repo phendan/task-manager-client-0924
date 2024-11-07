@@ -39,7 +39,16 @@ export const showTasksPage = async () => {
         return;
     }
 
-    const taskListHtml = renderTasks(user.tasks);
+    const tasks = user.tasks;
+
+    const toDos = tasks.filter(task => task.status === 'to-do');
+    const toDosHtml = renderTasks(toDos);
+
+    const inProgress = tasks.filter(task => task.status === 'in-progress');
+    const inProgressHtml = renderTasks(inProgress);
+
+    const done = tasks.filter(task => task.status === 'done');
+    const doneHtml = renderTasks(done);
 
     const tasksHtml = html` <div>
         <div>
@@ -47,10 +56,41 @@ export const showTasksPage = async () => {
         </div>
         <!-- Task List -->
         ${tasksFormHtml}
-        <div>${taskListHtml}</div>
+        <div>
+            <h2 class="text-lg font-bold">To-Dos</h2>
+            ${toDosHtml}
+        </div>
+
+        <div>
+            <h2 class="text-lg font-bold">In Progress</h2>
+            ${inProgressHtml}
+        </div>
+
+        <div>
+            <h2 class="text-lg font-bold">Done</h2>
+            ${doneHtml}
+        </div>
     </div>`;
 
     document.querySelector('#main-content')!.innerHTML = tasksHtml;
+
+    const dropdowns = document.querySelectorAll<HTMLSelectElement>('.change-status-dropdown');
+
+    dropdowns.forEach(dropdown => {
+        dropdown.addEventListener('change', async event => {
+            const status = dropdown.selectedOptions[0].value;
+            const taskId = dropdown.dataset.taskId;
+
+            try {
+                await http.get('/sanctum/csrf-cookie');
+                const response = await http.patch(`/api/task/${taskId}`, { status });
+                console.log(response);
+            } catch (errors) {
+            } finally {
+                showTasksPage();
+            }
+        });
+    });
 
     const taskForm = document.querySelector('#task-form');
     taskForm?.addEventListener('submit', async event => {
@@ -83,8 +123,12 @@ export const showTasksPage = async () => {
 const renderTasks = (tasks: Task[]) => {
     const taskElements = tasks
         .map(task => {
+            const selectHtml = renderSelect(task);
+
             return html`<li class="flex items-center justify-between py-2">
-                <div>${task.title}<span>${task.status}</span></div>
+                <div>${task.title}</div>
+                <!-- Change Status -->
+                ${selectHtml}
             </li>`;
         })
         .join('');
@@ -96,4 +140,21 @@ const renderTasks = (tasks: Task[]) => {
     `;
 
     return taskList;
+};
+
+const renderSelect = (task: Task) => {
+    const statuses = ['to-do', 'in-progress', 'done'];
+
+    const selectHtml = html`<select
+        class="change-status-dropdown bg-white"
+        data-task-id="${task.id}"
+    >
+        ${statuses.map(status => {
+            return html`<option value="${status}" ${task.status === status ? 'selected' : ''}>
+                ${status}
+            </option>`;
+        })}
+    </select>`;
+
+    return selectHtml;
 };
